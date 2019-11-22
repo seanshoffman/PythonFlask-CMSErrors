@@ -3,12 +3,7 @@ from cms.admin.models import User
 from flask import render_template, request, redirect, url_for, flash
 
 from functools import wraps
-from flask import g, session, current_app
-
-from blinker import Namespace # TASK(M03T01)
-_signals = Namespace() # TASK(M03T01)
-
-unauthorized = _signals.signal('unauthorized') # TASK(M03T02)
+from flask import g, session
 
 def protected(route_function):
     @wraps(route_function)
@@ -42,7 +37,6 @@ def login():
             session['user_id'] = user.id
             return redirect(url_for('admin.content', type='page'))
         else:
-            unauthorized.send(current_app._get_current_object(), user_id=user.id, username=user.username) # TASK(M03T03)
             flash(error)
             return render_template('admin/login.html'), 401
 

@@ -1,130 +1,213 @@
-# Module 1 - Authentication
+# Module 1 - Access Log
 
-## 1.1 - Models: Password Column
-[tag]: # (@pytest.mark.test_models_password_column_module1)
+## 1.1 - Disable Werkzeug Logging
+[tag]: # "@pytest.mark.test_disable_werkzeug_logging_module1"
+[code]: # "from logging import getLogger; request_log = getLogger('werkzeug'); request_log.disabled = True"
 
-Project Overview
------
+### Module Overview
+In this module we'll create a function to configure logging. The function creates and configures a rotating file handler. This function will then be used to configure an access log. Then using an `after_request` decorator we'll write all requests to this access log.
 
-In this module we'll alter the SQLAlchemy `User` model to include a `password` column. Using `Flask-Migrate`, we will add the new column to the database and populate the required fields. We will create a login HTML form and validate the form data in a new login route. The currently logged in user will be stored in a Flask `session`. The session will be cleared when the user logs out.
+### First Task
+By default, the Werzeug library logs each request to the console when debug mode is on. Let's disable this default log. Open the `cms/handlers.py` file, below the existing imports, import the `getLogger` method from `logging`.
 
-First Task
------
+Below the imports, call the `getLogger()` function and pass in the log we need, `'werkeug'`. Assign the result to a variable named `request_log`.
+Then set the disabled property of `request_log` to `True`.
 
-Open the file called `models.py` in the `cms/admin` folder. Find the `User` model, add a column of type `string` with a size of `100`. Make sure `nullable` is `False`. Name this column `password`.
+_Note: Unless otherwise noted, the rest of the tasks in this module happen in the file `cms/handlers.py`._
 
-## 1.2 - Models: Check Password
-[tag]: # (@pytest.mark.test_models_check_password_module1)
+## 1.2 - Configure Logging
+[tag]: # "@pytest.mark.test_configure_logging_module1"
+[code]: # "def configure_logging(name, level): log = getLogger(name); log.setLevel(level)"
 
-Eventually we are going to need to verify the username and password of a user. There are a few functions that are part of `werkzeug.security` that can help us out. Import `check_password_hash` from `werkzeug.security` below the other imports.
+Below all other code, create a new function called `configure_logging`. The function should have two parameters, `name` and `level`. In the function body create a variable called log and assign it a call to the `getLogger()` function. Pass in `name`. 
 
-The best place for a password check is in the `User` model itself. Add a function called `check_password` to the `User` model below the `password` column. Since `check_password` is part of a class pass two parameters, `self` and `value`.
+On a new line call the `setLevel()` method on `log`. Pass in `level`.
 
-In the body of `check_password` return a call to the `check_password_hash` function. Pass in the new class variable `password` (**Hint: self.**), and the `value`.
+## 1.3 - Rotate File Handler
+[tag]: # "@pytest.mark.test_rotating_file_handler_module1"
+[code]: # "from logging.handlers import RotatingFileHandler; handler = RotatingFileHandler('logs/{}.log'.format(name), maxBytes=1024*1024, backupCount=10)"
+Back at the top, by the other imports, import `RotatingFileHandler` from `logging.handlers`.
 
-## 1.3 - Database Migration
-[tag]: # (@pytest.mark.test_database_migration_module1)
+Return back to the `configure_logging` function and add a new variable called `handler`. Assign this variable a new `RotatingFileHandler`. Configure the instance with the file path `'logs/{}.log'.format(name)`. Also, set the max bytes to `1024*1024` and the backup count to `10`.
 
-There is currently no database for the application. Let's create one and migrate the new scheme that includes our new `password` column. Open a terminal, command prompt, or powershell, and `cd` to the root folder of the project.
+## 1.4 - Add Log Handler
+[tag]: # "@pytest.mark.test_add_handler_module1"
+[code]: # "log.addHandler(handler); return log"
+Still in the `configure_logging` function add the `handler` to `log`. Finally, return the `log` from the function.
 
-The `Flask-Migrate` extension should be installed. This exenstion provides several `flask db` commands.
+## 1.5 - Timestamp Formatting
+[tag]: # "@pytest.mark.test_timestamp_module1"
+[code]: # "from time import strftime; timestamp = strftime('[%d/%b/%Y %H:%M:%S]')"
+Below the `configure_logging` function, use the `strftime()` method to get the current date and time. Format the date and time as follows: `[20/Nov/2019 14:59:12]`. Save the result in a variable named `timestamp`.
 
-- First, to initialize and configure our schema run the `flask db init` command.
-- Second, to create a migration run the `flask db migrate` command.
-- Third, to create the database and run the migration use `flask db upgrade`.
-- Finally, run the custom command `flask add-content` to add content to the database.
+## 1.6 - Access Log
+[tag]: # "@pytest.mark.test_access_log_module1"
+[code]: # "from logging import INFO, WARN, ERROR; access_log = configure_logging('access', INFO)"
+To log certain types of events import the levels `INFO`, `WARN`, and `ERROR` from the correct module.
 
-## 1.4 - Template: Login Form
-[tag]: # (@pytest.mark.test_template_login_form_module1)
+With these imported, use the `configure_logging` function to create a log called `access.log`. **Hint: pass the correct `name`.** Make sure to log events at the `INFO` level. Save the result of this call in a variable called `access_log`.
 
-Open the `login.html` file found in the `templates` folder of the `admin` blueprint. This template contains a `<form>` element with several empty `<div>`s. Each one having a class of `control`. Let's add a form control to each one. 
+## 1.7 - After Request
+[tag]: # "@pytest.mark.test_after_request_module1"
+[code]: # "@app.after_request; def after_request(response): return response"
+Create a new function called `after_request`. It should have one parameter called `response`. In the body return `response`. Decorate the function with the `after_request` decorator. *Hint: Use `@app` as the first part of the decorator.* 
 
-Find the label with the text, _Username_. In the _control_ `<div>` below, add a text field that has a name of `username` and a class of `input`.
-Find the label with the text, _Password_. In the _control_ `<div>` below, add a text field that has a name of `password` and a class of `input`.
+## 1.8 - Access Log Format
+[tag]: # "@pytest.mark.test_access_log_format_module1"
+[code]: # "access_log.info('%s - - %s "%s %s %s" %s -', request.remote_addr, timestamp, request.method, request.path, request.scheme.upper(), response.status_code)"
+We have at this point created an `access_log`. Let's now write all info level events to this log. Call the `info` method on `access_log` and pass in the following information in the order noted:
 
-In the last empty `<div>` towards the bottom, add a submit button that has a `value` of `Submit`. Give it two classes, `button` and `is-link`.
+1. Format: `'%s - - %s "%s %s %s" %s -'`
+2. Request remote address
+3. timestamp *Hint: Previously declared*
+4. Request method
+5. Request path
+6. Request scheme *Hint: Should be uppercase*
+7. Response status code
 
-## 1.5 - Auth: Imports
-[tag]: # (@pytest.mark.test_auth_imports_module1)
+Example: `127.0.0.1 - - [20/Nov/2019 14:59:12] "GET / HTTP" 200 -`
 
-The `auth.py` file in `cms/admin` will contain all authentication related code. Open it and at the top add the following imports:
+## 1.9 - Valid Status Codes
+[tag]: # "@pytest.mark.test_valid_status_codes_module1"
+[code]: # "if int(response.status_code) < 400:"
+The access log should only contain valid requests. Above the `info()` in the `after_request()` function add an `if` statement. The condition should check in the response status code is less than 400. **Hint: You will need to convert the status code to an `int()`.**
 
-- import `wraps` from `functools`
-- import `session` and `g` from `flask`
+# Module 2 - Error Log
 
-These will be necessary for when we create our custom authentication decorator. _Note: Unless otherwise noted, the rest of the tasks in this module happen in the file `auth.py`._
+## 2.1 - Inject Titles
+[tag]: # "@pytest.mark.test_inject_titles_module2"
+[code]: # "@app.context_processor; def inject_titles(): titles = Content.query.with_entities(Content.slug, Content.title).join(Type).filter(Type.name == 'page'); return dict(titles=titles)"
 
-## 1.6 - Auth: Protected Decorator
-[tag]: # (@pytest.mark.test_auth_protected_decorator_module1)
+### Module Overview
+In this module we'll handle 404 and 500 errors. When these errors happen the user will be redirected to the appropriate template. The 500 errors will also be logged to an error log.
 
-To require users to login when accessing any of the admin dashboard routes i.e. `/admin` lets create a custom route decorator.
-Below the imports create a function called `protected`. The first parameter to the function should be called `route_function`.
+### First Task
+We would like you used the `titles` template variable in both of our custom templates. To do this we can use a context processor. 
 
-In the body of this new function create another function called `wrapped_route_function`. To allow this function to accept an arbitry number of arguments use `**kwargs` as the first parameter. 
+First, open the `cms/handlers.py` file and create a function called `inject_titles`. In the body declare a variable called `titles` and assign it a call to `Content.query.with_entities()`. To `with_entities()`, pass the _Content_ `slug` and `title`.
 
-For now the only statement in the body of the `wrapped_route_function` should return a call to the `route_function`. Pass `**kwargs` as the first argument.
+Second, refine our query to only select the content type of _page_. Chain a call to `join()` on `with_entities()` and pass the `Type` class. Chain another call to `filter()` with a conditional that filters by page. **Hint: Where `Type.name` equals `'page'`.** 
 
-## 1.7 - Auth: Redirect User
-[tag]: # (@pytest.mark.test_auth_redirect_user_module1)
+Third, below the `titles` variable, return a `dict()` with a keyword argument of `titles` set to `titles`.
 
-For the decorator to correctly wrap the route function, add the `@wraps` decorator to the `wrapped_route_function` function. Make sure to pass `route_function` to the decorator.
+Finally, add the `@app.context_processor` decorator to the `inject_titles()` function.
 
-Next, in the body of `wrapped_route_function` above the `return` statement, add an `if` statement that tests whether `g.user` is `None`.
-In the `if` return a redirect that points to `admin.login`. *Hint: you will need a url_for function.*
+## 2.2 - Not Found Template
+[tag]: # "@pytest.mark.test_not_found_template_module2"
+[code]: # "Create `templates/error.html`"
+In preparation for handling 404 errors we need a template to render. Create a new file called `not_found.html` in the `cms/templates` folder. 
 
-At the bottom of the `protected` function, make sure you are not in the `wrapped_route_function` function, `return` `wrapped_route_function`.
+As the first line of the template, extend the `base.html` template. Next, create a template block called `content`.  Lastly, create a link in the template block that points the user back to the home page. **Hint: url_for,  `index` route, and slug is `'home'`.**
 
-## 1.8 - Auth: Load User
-[tag]: # (@pytest.mark.test_auth_load_user_module1)
+## 2.3 -Not Found Handler
+[tag]: # "@pytest.mark.test_not_found_handler_module2"
+[code]: # "@app.errorhandler(404); def page_not_found(e): return render_template('not_found.html'), 404"
+When 404 errors happen let\'s now render the template we just created. Open `cms/handlers.py` and create a new function called `page_not_found`. It should have one parameter called `e`. In the body render the `not_found.html` template. Make sure to add a status code of `404`.
 
-Below the new decorator create a new function called `load_user`. As the first line _get_ the `user_id` from the _session_ and store it in a variable called `user_id`. Decorate the function with the `before_app_request` decorator. *Hint: auth.py is part of the `admin_bp` blueprint*.
+Attach the `errorhandler` decorator to this function with the `404` status code.
 
-As the last line of `load_user` use a ternary `if` to assign `g.user` the result of `User.query.get(user_id)` if `user_id is not None` else assign it `None`.
+## 2.4 - Error Log
+[tag]: # "@pytest.mark.test_error_log_module2"
+[code]: # "error_log = configure_logging('error', ERROR)"
+Still in `cms/handlers.py`, below the existing code, use the `configure_logging` function to create a log called `error.log`. **Hint: pass the correct `name`.** Make sure to log events at the `ERROR` level. Save the result of this call in a variable called `error_log`.
 
-## 1.9 - Auth: Login Route
-[tag]: # (@pytest.mark.test_auth_login_route_module1)
+## 2.5 - Error Handler
+[tag]: # "@pytest.mark.test_error_handler_module2"
+[code]: # "from traceback import format_exc; @app.errorhandler(Exception); def handle_exception(e): tb = format_exc()"
+Still in `cms/handlers.py`, below the existing imports, import the `format_exec` method from `traceback`. Then, below the 404 error handler, create a new function called `handle_exception`. It should have one parameter called `e`. In the body call the `format_exc()` function and assign the result to a variable called `tb`.
 
-Let's create a new route function called `login`. Add a route decorator with a URL pattern of `/login`. Make sure this new route allows _GET_ and _POST_ requests. _Note: this route is part of our `admin_bp` blueprint._
+Attach the `errorhandler` decorator to this function with the `404` status code.
 
-In the body render the 'admin/login.html' template, make sure to `return` the results.
+## 2.6 - Error Log Format
+[tag]: # "@pytest.mark.test_error_log_format_module2"
+[code]: # "error_log.error('%s - - %s "%s %s %s" 500 -\n%s', request.remote_addr, timestamp, request.method, request.path, request.scheme.upper(), tb)"
+We have at this point created an `error_log`. Let's now write all error level events to this log. In the `handle_exception` function, call the `error` method on `error_log` and pass in the following information in the order noted:
 
-## 1.10 - Auth: Post Request
-[tag]: # (@pytest.mark.test_auth_post_request_module1)
+1. Format: `'%s - - %s "%s %s %s" 500 -\n%s'`
+2. Request remote address
+3. timestamp *Hint: Previously declared*
+4. Request method
+5. Request path
+6. Request scheme *Hint: Should be uppercase*
+7. Traceback *Hint: Previously declared*
 
-Above the redirect statements, add an `if` that checks if the request method is _POST_. If so, assign create two variable, `username` and `password` and assign each the appropriate form data. We are going to validate some of our form data on the server side, so, set a new variable called `error` to `None`.
+Example: 
+```
+127.0.0.1 - - [20/Nov/2019 14:59:12] "GET / HTTP" 200 -
+Traceback (Error) ...
+  File ...
+TypeError ...
+```
 
-## 1.11 - Auth: Get User & Check Password
-[tag]: # (@pytest.mark.test_auth_get_user_module1)
+## 2.7 - Error Template
+[tag]: # "@pytest.mark.test_error_template_module2"
+[code]: # "Create `templates/error.html`"
+In preparation for handling 500 errors we need a template to render. Create a new file called `error.html` in the `cms/templates` folder. 
 
-Let's check if a user exists with the `username` that is provided. _query_ the `User` model and _filter_by()_ the `username`. Make sure to take just the _first()_ row and assign it to a `user` variable.
+As the first line of the template, extend the `base.html` template. Next, create a template block called `content`.  In the template block add an `error` template variable. Lastly, create a link in the template block that points the user back to the home page. **Hint: url_for,  `index` route, and slug is `'home'`.**
 
-Check the password of the `user` by calling `check_password` on the `user` object. Assign the result to a variable called `check`.
+## 2.8 - Render Original Error Template
+[tag]: # "@pytest.mark.test_render_original_error_template_module2"
+[code]: # "original = getattr(e, 'original_exception', None); return render_template('error.html', error=original), 500"
 
-## 1.12 - Auth: Validate Form Data
-[tag]: # (@pytest.mark.test_auth_validate_form_data_module1)
+Return back to the `handle_exception` function in `cms/handlers.py`. Add a statement that <i>get</i>'s the `'original_exception'` <i>attr</i>ibute from `e`. Assign this to a variable named `original`. Then render the `error.html` template, pass an `error` keyword argument set to `original`. Make sure to add a status code of `500`.
 
-We want to make sure the `user` exists, so in an `if` statement check if `user` is `None`.  Also verify the password is correct. _Note:  Use an `elif`, `check` should not be `None`._
-Both the `if` and `elif` should set `error` to an appropriate message.
+## 2.9 - Render Simple Error Template
+[tag]: # "@pytest.mark.test_render_simple_error_template_module2"
+[code]: # "if original is None: return render_template('error.html'), 500"
+Just above the existing `return` statement in the `handle_exception` function add an `if` statement that checks if `original` is `None`. If so render the `error.html` template with a `500` status code.
 
-## 1.13 - Auth: Store User in Session
-[tag]: # (@pytest.mark.test_auth_store_user_in_session_module1)
+# Module 3 - Unauthorized Log
 
-If there is  no `error` _clear()_ the the _session_. Also, store the value of `user.id` in the _session_ key `user_id`. Then finally _redirect_ to `admin.content` with `type` set to `'page'`.
+## 3.1 - Signals
+[tag]: # "@pytest.mark.test_namespace_module3"
+[code]: # "from blinker import Namespace; _signals = Namespace()"
 
-Outside the error `if` statement _flash()_ the `error`.
+### Module Overview
+In this module we'll create a signal to write unauthorized login attempts to a log file.
 
-## 1.14 - Auth: Logout Route
-[tag]: # (@pytest.mark.test_auth_logout_route_module1)
+### First Task
+Open the `cms/admin/auth.py` file and at the top below the other imports, import `Namespace` from `blinker`.
 
-Let's create a new route function called `logout`. Add a route decorator with a URL pattern of `/logout`. _Note: this route is part of our `admin_bp` blueprint._ 
+Also at the top create an instance of `Namespace` named `_signals`.
 
-In the body _clear()_ the _session_, and return a redirect to `admin.login`.
+## 3.2 - Unauthorized Signal
+[tag]: # "@pytest.mark.test_unauthorized_signal_module3"
+[code]: # "unauthorized = _signals.signal('unauthorized')"
+Still in `cms/admin/auth.py`, create a new signal by calling `signal()` on `_signals`. Pass the name `'unauthorized'` to the `signal()` method and then assign the result to a variable with the same name.
 
-Switch to `layout.html` and find the `<div>` that has a class of `nav-item`. To this `<div>` add an anchor element that says `Logout` and has two classes, `button` and `is-light`. In the `href` attribute use the `url_for()` function to point to the `admin.logout` route.
+## 3.3 - Send Unauthorized Signal
+[tag]: # "@pytest.mark.test_send_unauthorized_signal_module3"
+[code]: # "unauthorized.send(current_app._get_current_object(), user_id=user.id, username=user.username)"
+Before sending the signal, import `current_app` from `flask` at the top of `cms/admin/auth.py`.
 
-## 1.15 - Admin: Protect Routes
-[tag]: # (@pytest.mark.test_admin_protect_routes_module1)
+The signal should be sent when there is an unauthorized login attempt. Find the `else` statement in the `login` route of `cms/admin/auth.py`. Add a call to the `send()` method of the `unauthorized` signal. 
 
-A few last things, open the `cms/admin/__init__.py` file. Below the `admin_bp` variable, import `auth` from `cms.admin`. This placement is important.
+Pass three values to the `send()` method the current app object (`current_app._get_current_object()`), the `user.id` as `user_id`, and `user.username` as `username`.
 
-Finally, protect all the routes in the admin blueprint with the `@auth.protected` custom decorator. This should include these routes: `content`, `create`, `edit`, `users` and `settings`.
+## 3.4 - Import Unauthorized Signal
+[tag]: # "@pytest.mark.test_import_unauthorized_signal_module3"
+[code]: # "from cms.admin.auth import unauthorized"
+
+Switch back to the `cms/handlers.py` file and import the new `unauthorized` signal from `auth.py`.
+
+## 3.5 - Unauthorized Log
+[tag]: # "@pytest.mark.test_unauthorized_log_module3"
+[code]: # "unauthorized_log = configure_logging('unauthorized', WARN)"
+
+Still in `cms/handlers.py`, below the existing code, use the `configure_logging` function to create a log called `unauthorized.log`. **Hint: pass the correct `name`.** Make sure to log events at the `WARN` level. Save the result of this call in a variable called `unauthorized_log`.
+
+## 3.6 - Unauthorized Log Format
+[tag]: # "@pytest.mark.test_unauthorized_log_format_module3"
+[code]: # "def log_unauthorized(app, user_id, username, **kwargs): unauthorized_log.warning('Unauthorized: %s %s %s', timestamp, user_id, username)"
+At the bottom of `cms/handlers.py` create a function called `log_unauthorized` that will eventually connect to the `unauthorized` signal.
+
+The `log_unauthorized` function should accept four parameters named and ordered as follows, `app`, `user_id`, `username` and ``**kwargs`. 
+
+The function body should have a single line that calls the `warning()` method of `unauthorized_log`. The format of each log entry should be: 
+`Unauthorized: [20/Nov/2019 14:59:12] 1 psdemo` where `1` is the `user_id` and `psdemo` is the `username`.
+## 3.7 - Connect Decorator
+[tag]: # "@pytest.mark.test_connect_decorator_module3"
+[code]: # "@unauthorized.connect"
+
+Decorate the `log_unauthorized` function with the correct decorator to _connect_ it to the `unauthorized` signal. 

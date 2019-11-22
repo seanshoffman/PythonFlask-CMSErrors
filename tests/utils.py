@@ -1,10 +1,44 @@
 import re
+import parso
 from bs4 import BeautifulSoup
 from jinja2 import Environment, PackageLoader, exceptions, meta, nodes
-
+from pathlib import Path
 from redbaron import RedBaron
 
-def parsed_content(name, path='/admin/templates/admin'):
+def get_source_code(filename, admin=False):
+    if admin:
+        file_path = Path.cwd() / 'cms' / 'admin' / filename
+    else:
+        file_path = Path.cwd() / 'cms' / filename
+    grammar = parso.load_grammar()
+    module = grammar.parse(path=file_path.resolve())
+    parse_error = len(grammar.iter_errors(module)) == 0
+    try:
+        error_message = grammar.iter_errors(module)[0].message
+        error_start_pos = grammar.iter_errors(module)[0].start_pos[0]
+    except IndexError:
+        error_message = ''
+        error_start_pos = ''
+    message = '{} on or around line {} in `{}`.' \
+        .format(error_message, error_start_pos, file_path.name)
+    assert parse_error, message
+
+    with open(file_path.resolve(), 'r') as source_code:
+        return RedBaron(source_code.read())
+
+def handlers_code():
+    return get_source_code('handlers.py')
+
+def auth_code():
+    return get_source_code('auth.py', True)
+
+def rq(string):
+    return re.sub(r'(\'|")', '', str(string))
+
+def tqrw(string):
+    return str(string).replace("'", '"').replace(' ', '')
+
+def parsed_content(name, path='templates'):
     try:
         env = Environment(loader=PackageLoader('cms', path))
         return env.parse(env.loader.get_source(env, name + '.html')[0])
@@ -50,56 +84,6 @@ def get_calls(name):
         calls.append(simplify(node))
     return calls
 
-def select_code(content, start, end):
-    found = False
-    code = []
-
-    if isinstance(content, str):
-        parsed = parsed_content(content)
-    elif isinstance(content, nodes.Node):
-        parsed = content
-    else:
-        return []
-
-    for node in parsed.find_all(nodes.Node):
-        if isinstance(node, nodes.TemplateData) and bool(re.search(start, node.data)):
-            found = True
-
-        if isinstance(node, nodes.TemplateData) and bool(re.search(end, node.data)):
-            found = False
-
-        if found and not isinstance(node, nodes.TemplateData):
-            code.append(node)
-    return code
-
-def template_functions(name, function_name):
-    functions = []
-
-    for call in parsed_content(name).find_all(nodes.Call):
-        if call.node.name == function_name:
-            args_string = ''
-            if isinstance(call.node, nodes.Name) and isinstance(call.args[0], nodes.Name):
-                args_string += call.node.name + ':' + call.args[0].name
-            else:
-                args = getattr(call, 'args')[0]
-                if isinstance(args, nodes.Const):
-                    args_string += args.value + ':'
-                kwargs = call.kwargs[0] if len(getattr(call, 'kwargs')) > 0 else getattr(call, 'kwargs')
-                if isinstance(kwargs, nodes.Keyword):
-                    args_string += kwargs.key + ':'
-                    if isinstance(kwargs.value, nodes.Const):
-                        args_string += kwargs.value.value
-                    else:
-                        if isinstance(kwargs.value, nodes.Name):
-                            args_string += kwargs.value.name
-                        else:
-                            args_string += kwargs.value.node.name
-                            if isinstance(kwargs.value.arg, nodes.Const):
-                                args_string += ':' + kwargs.value.arg.value
-            functions.append(args_string)
-
-    return functions
-
 def get_imports(code, value):
     imports = code.find_all('from_import',  lambda node: ''.join(list(node.value.node_list.map(lambda node: str(node)))) == value).find_all('name_as_name')
     return list(imports.map(lambda node: node.value))
@@ -117,9 +101,6 @@ def get_conditional(code, values, type, nested=False):
         if final_node is not None:
             return final_node
     return None
-
-def rq(string):
-    return re.sub(r'(\'|")', '', str(string))
 
 def get_route(code, route):
     route_function = code.find('def', name=route)
@@ -189,12 +170,78 @@ def get_form_data(code, route, values, name):
 
 def get_args(nodes, rq=True):
     args = []
-    for node in nodes:
-        if node.target is None:
-            if rq:
-                args.append(str(node.value).replace("'", '"').replace(' ', ''))
+    if nodes is not None: 
+        for node in nodes:
+            if node.target is None:
+                if rq:
+                    args.append(tqrw(node.value))
+                else:
+                    args.append(str(node.value))
             else:
-                args.append(str(node.value))
-        else:
-            args.append('{}:{}'.format(node.target.value, str(node.value)))
+                if rq:
+                    args.append('{}:{}'.format(tqrw(node.target.value), tqrw(node.value)))
+                else:
+                    args.append('{}:{}'.format(node.target.value, str(node.value)))
     return args
+
+def select_code(content, start, end):
+    found = False
+    code = []
+
+    if isinstance(content, str):
+        parsed = parsed_content(content)
+    elif isinstance(content, nodes.Node):
+        parsed = content
+    else:
+        return []
+
+    for node in parsed.find_all(nodes.Node):
+        if isinstance(node, nodes.TemplateData) and bool(re.search(start, node.data)):
+            found = True
+
+        if isinstance(node, nodes.TemplateData) and bool(re.search(end, node.data)):
+            found = False
+
+        if found and not isinstance(node, nodes.TemplateData):
+            code.append(node)
+    return code
+
+def template_functions(name, function_name):
+    functions = []
+
+    for call in parsed_content(name).find_all(nodes.Call):
+        if call.node.name == function_name:
+            args_string = ''
+            if isinstance(call.node, nodes.Name) and isinstance(call.args[0], nodes.Name):
+                args_string += call.node.name + ':' + call.args[0].name
+            else:
+                args = getattr(call, 'args')[0]
+                if isinstance(args, nodes.Const):
+                    args_string += args.value + ':'
+                kwargs = call.kwargs[0] if len(getattr(call, 'kwargs')) > 0 else getattr(call, 'kwargs')
+                if isinstance(kwargs, nodes.Keyword):
+                    args_string += kwargs.key + ':'
+                    if isinstance(kwargs.value, nodes.Const):
+                        args_string += kwargs.value.value
+                    else:
+                        if isinstance(kwargs.value, nodes.Name):
+                            args_string += kwargs.value.name
+                        else:
+                            args_string += kwargs.value.node.name
+                            if isinstance(kwargs.value.arg, nodes.Const):
+                                args_string += ':' + kwargs.value.arg.value
+            functions.append(args_string)
+
+    return functions
+
+def template_variables(name):
+    return [node.name for node in parsed_content(name).find_all(nodes.Name)]
+
+def template_block(name):
+    blocks = []
+    for block in parsed_content(name).find_all(nodes.Block):
+        blocks.append(block.name)
+    return blocks
+
+def template_extends(name):
+    return list(meta.find_referenced_templates(parsed_content(name)))
