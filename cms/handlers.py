@@ -6,7 +6,7 @@ from cms.admin.models import Content, Type
 
 from logging import getLogger
 
-request_log = getLogger('werkeug');
+request_log = getLogger('werkzeug')
 
 request_log.disabled = True
 #!
