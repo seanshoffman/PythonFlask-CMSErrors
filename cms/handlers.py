@@ -28,3 +28,7 @@ def configure_logging(name, level):
 access_log = configure_logging('access', INFO)
 
 timestamp = strftime("[%d/%b/%Y %H:%M:%S]")
+
+@app.after_request
+def after_request(response):
+    return response
