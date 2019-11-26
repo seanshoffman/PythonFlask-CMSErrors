@@ -17,3 +17,7 @@ def configure_logging(name, level):
     log.setLevel(level)
 
     handler = RotatingFileHandler('logs/{}.log'.format(name), maxBytes=1024*1024, backupCount=10)
+
+    log.addHandler(handler)
+
+    return log
