@@ -4,7 +4,7 @@ from flask import request, render_template
 from cms import app
 from cms.admin.models import Content, Type
 
-from logging import getLogger
+from logging import getLogger, INFO, WARN, ERROR
 from logging.handlers import RotatingFileHandler
 
 from time import strftime
@@ -23,5 +23,8 @@ def configure_logging(name, level):
     log.addHandler(handler)
 
     return log
+
+
+access_log = configure_logging('access', INFO)
 
 timestamp = strftime("[%d/%b/%Y %H:%M:%S]")
