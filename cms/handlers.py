@@ -5,6 +5,7 @@ from cms import app
 from cms.admin.models import Content, Type
 
 from logging import getLogger
+from logging.handlers import RotatingFileHandler
 #!
 
 request_log = getLogger('werkzeug')
@@ -15,3 +16,4 @@ def configure_logging(name, level):
     log = getLogger(name)
     log.setLevel(level)
 
+    handler = RotatingFileHandler('logs/{}.log'.format(name), maxBytes=1024*1024, backupCount=10)
