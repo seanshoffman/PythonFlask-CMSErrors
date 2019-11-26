@@ -31,7 +31,11 @@ timestamp = strftime("[%d/%b/%Y %H:%M:%S]")
 
 @app.after_request
 def after_request(response):
-    if (int(response.status_code) < 400)
+    if int(response.status_code) < 400:
         access_log.info('%s - - %s "%s %s %s" %s -', request.remote_addr, timestamp, request.method, request.path, request.scheme.upper(), response.status_code)
     return response
 
+@app.context_processor
+def inject_titles():
+    titles = Content.query.with_entities(Content.slug, Content.title).join(Type).filter(Type.name == 'page')
+    return dict(titles=titles)
