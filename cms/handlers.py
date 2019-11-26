@@ -6,6 +6,8 @@ from cms.admin.models import Content, Type
 
 from logging import getLogger
 from logging.handlers import RotatingFileHandler
+
+from time import strftime
 #!
 
 request_log = getLogger('werkzeug')
@@ -21,3 +23,5 @@ def configure_logging(name, level):
     log.addHandler(handler)
 
     return log
+
+timestamp = strftime("[%d/%b/%Y %H:%M:%S]")
