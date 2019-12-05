@@ -39,3 +39,9 @@ def after_request(response):
 def inject_titles():
     titles = Content.query.with_entities(Content.slug, Content.title).join(Type).filter(Type.name == 'page')
     return dict(titles=titles)
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('not_found.html'), 404
+
+error_log = configure_logging('error', ERROR)
