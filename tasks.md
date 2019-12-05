@@ -206,6 +206,7 @@ The `log_unauthorized` function should accept four parameters named and ordered 
 
 The function body should have a single line that calls the `warning()` method of `unauthorized_log`. The format of each log entry should be: 
 `Unauthorized: [20/Nov/2019 14:59:12] 1 psdemo` where `1` is the `user_id` and `psdemo` is the `username`.
+
 ## 3.7 - Connect Decorator
 [tag]: # "@pytest.mark.test_connect_decorator_module3"
 [code]: # "@unauthorized.connect"

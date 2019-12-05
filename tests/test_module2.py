@@ -211,7 +211,7 @@ def test_error_handler_module2():
         )
     format_exc_call_exists = format_exc_call is not None
     assert format_exc_call_exists, \
-        'Are you calling the `format_exc_call()` function and assigning the result to `tb`?'
+        'Are you calling the `format_exc()` function and assigning the result to `tb`?'
 
 @pytest.mark.test_error_log_format_module2
 def test_error_log_format_module2():
