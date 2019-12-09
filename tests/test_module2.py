@@ -52,7 +52,7 @@ def test_inject_titles_module2():
     assert slug_arg, \
         'Are you passing `Content.slug` to the `with_entities()` function?'
 
-    title_arg = 'Content.slug' in with_entities_args
+    title_arg = 'Content.title' in with_entities_args
     assert title_arg, \
         'Are you passing `Content.title` to the `with_entities()` function?'
 
@@ -86,7 +86,7 @@ def test_inject_titles_module2():
 
     return_dict_args = 'titles:titles' in get_args(return_dict.find('call'))
     assert return_dict_args, \
-        'Are you passing the `titles` with a `titles` keyword argument to `dict()`?'
+        'Are you passing a `titles` keyword argument set to `titles` to `dict()`?'
 
 @pytest.mark.test_not_found_template_module2
 def test_not_found_template_module2():
@@ -322,7 +322,7 @@ def test_render_original_error_template_module2():
 
     second_arg = getattr_args[1] == '"original_exception"'
     assert second_arg, \
-        'Are you passing the `"original_exception"` to `getattr()` as the second argument?'
+        'Are you passing `"original_exception"` to `getattr()` as the second argument?'
 
     third_arg = getattr_args[2] == 'None'
     assert third_arg, \
@@ -338,7 +338,7 @@ def test_render_original_error_template_module2():
         node.value[-1].value == '500') is not None
 
     assert return_500, \
-        'The `handle_exception` function should render the `error.html` template with a `500`. Make sure to pass the keyword argument `error` set to the variable created to store the result of the `getattr` call.'
+        'The `handle_exception` function should render the `error.html` template with a `500`. Pass the keyword argument `error` set to original.'
 
 @pytest.mark.test_render_simple_error_template_module2
 def test_render_simple_error_template_module2():

@@ -12,7 +12,7 @@ def test_namespace_module3():
     blinker_import = get_imports(auth_code(), 'blinker')
     blinker_import_exits = blinker_import is not None
     assert blinker_import_exits, \
-        'Do you have a `werkzeug.security` import statement?'
+        'Do you have a `blinker` import statement?'
     namespace_exists = 'Namespace' in blinker_import
     assert namespace_exists, \
         'Are you importing `Namespace` from `blinker` in `cms/admin/auth.py`?'
@@ -174,7 +174,7 @@ def test_unauthorized_log_format_module3():
 
     second_arg = len(warning_args) >= 2 and warning_args[1] == 'timestamp'
     assert second_arg, \
-        'Are you passing `timestamp` to `unauthorized_log.warning()` as the third argument?'
+        'Are you passing `timestamp` to `unauthorized_log.warning()` as the second argument?'
 
     third_arg = len(warning_args) >= 3 and warning_args[2] == 'user_id'
     assert third_arg, \

@@ -13,7 +13,7 @@ def test_disable_werkzeug_logging_module1():
     logging_import = get_imports(handlers_code(), 'logging')
     logging_import_exits = logging_import is not None
     assert logging_import_exits, \
-        'Do you have a `werkzeug.security` import statement?'
+        'Do you have a `logging` import statement?'
     get_logger_exists = 'getLogger' in logging_import
     assert get_logger_exists, \
         'Are you importing `getLogger` from `logging` in `cms/handlers.py`?'
